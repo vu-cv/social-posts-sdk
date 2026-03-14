@@ -1,4 +1,4 @@
-import { HttpClient } from '../../http/http-client.js'
+import { HttpClient, graphErrorParser } from '../../http/http-client.js'
 import { ValidationError, SocialSDKError } from '../../errors/index.js'
 import type { InstagramConfig, PostResult } from '../../types/index.js'
 import {
@@ -24,11 +24,13 @@ export class InstagramClient {
     this.#igUserId = config.igUserId
     this.#pollIntervalMs = config.pollIntervalMs ?? 3000
     this.#pollMaxAttempts = config.pollMaxAttempts ?? 20
-    this.#http = new HttpClient(
-      `https://graph.facebook.com/${apiVersion}`,
-      config.accessToken,
-      'instagram',
-    )
+    this.#http = new HttpClient({
+      baseUrl: `https://graph.facebook.com/${apiVersion}`,
+      platform: 'instagram',
+      defaultParams: { access_token: config.accessToken },
+      parseError: graphErrorParser,
+      checkGraphApiErrors: true,
+    })
   }
 
   /**

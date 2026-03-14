@@ -1,4 +1,14 @@
-export type Platform = 'facebook' | 'instagram'
+export type Platform =
+  | 'facebook'
+  | 'instagram'
+  | 'threads'
+  | 'twitter'
+  | 'linkedin'
+  | 'tiktok'
+  | 'youtube'
+  | 'pinterest'
+  | 'telegram'
+  | 'zalo'
 
 export class SocialSDKError extends Error {
   readonly platform: Platform
@@ -15,7 +25,7 @@ export class SocialSDKError extends Error {
   }
 }
 
-/** Thrown when the access token is invalid or expired (Graph API error codes 190, 102) */
+/** Thrown when the access token is invalid or expired */
 export class AuthError extends SocialSDKError {
   constructor(message: string, platform: Platform, code: number, rawError?: unknown) {
     super(message, platform, code, rawError)
@@ -24,7 +34,7 @@ export class AuthError extends SocialSDKError {
   }
 }
 
-/** Thrown when the Graph API rate limit is hit (error code 613, 32, 4) */
+/** Thrown when an API rate limit is hit */
 export class RateLimitError extends SocialSDKError {
   constructor(message: string, platform: Platform, code: number, rawError?: unknown) {
     super(message, platform, code, rawError)

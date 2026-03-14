@@ -1,16 +1,29 @@
 # social-posts-sdk
 
-TypeScript SDK for posting to social media platforms. Currently supports **Facebook Fanpage** and **Instagram Business/Creator**.
+TypeScript SDK for posting to social media platforms.
 
 > 🇻🇳 [Xem hướng dẫn tiếng Việt](README.vi.md)
+
+## Supported Platforms
+
+| Platform | Methods |
+|----------|---------|
+| **Facebook** (Fanpage) | `postText`, `postPhoto`, `postAlbum`, `postVideo` |
+| **Instagram** (Business/Creator) | `postImage`, `postVideo`, `postCarousel` |
+| **Threads** | `postText`, `postImage`, `postVideo`, `postCarousel` |
+| **Twitter / X** | `postText`, `postImages`, `postVideo` |
+| **LinkedIn** (Pages & Personal) | `postText`, `postImage`, `postVideo` |
+| **TikTok** | `postVideo`, `postPhotos` |
+| **YouTube** | `uploadVideo` |
+| **Pinterest** | `createPin` |
+| **Telegram** (Bot) | `sendMessage`, `sendPhoto`, `sendVideo`, `sendAlbum` |
+| **Zalo** (Official Account) | `postFeed` |
 
 ---
 
 ## Requirements
 
 - Node.js >= 22
-- Facebook App with Graph API access
-- Page Access Token with the correct permissions
 
 ---
 
@@ -28,269 +41,309 @@ npm install social-posts-sdk
 import { SocialPostsClient } from 'social-posts-sdk'
 
 const client = new SocialPostsClient({
-  facebook: {
-    pageId: 'YOUR_PAGE_ID',
-    accessToken: 'YOUR_PAGE_ACCESS_TOKEN',
-  },
-  instagram: {
-    igUserId: 'YOUR_IG_USER_ID',
-    accessToken: 'YOUR_ACCESS_TOKEN',
-  },
+  facebook:  { pageId: '...', accessToken: '...' },
+  instagram: { igUserId: '...', accessToken: '...' },
+  threads:   { userId: '...', accessToken: '...' },
+  twitter:   { accessToken: '...' },
+  linkedin:  { accessToken: '...' },
+  tiktok:    { accessToken: '...' },
+  youtube:   { accessToken: '...' },
+  pinterest: { accessToken: '...' },
+  telegram:  { botToken: '...' },
+  zalo:      { accessToken: '...' },
 })
 
-// Post to Facebook
-await client.facebook.postText({ message: 'Hello from the SDK!' })
-
-// Post to Instagram
-await client.instagram.postImage({
-  imageUrl: 'https://example.com/photo.jpg',
-  caption: 'Hello Instagram!',
-})
+// Post to multiple platforms in parallel
+await Promise.all([
+  client.facebook?.postText({ message: 'Hello!' }),
+  client.instagram?.postImage({ imageUrl: 'https://...', caption: 'Hello!' }),
+  client.threads?.postText({ text: 'Hello!' }),
+  client.twitter?.postText({ text: 'Hello!' }),
+  client.telegram?.sendMessage({ chatId: '@channel', text: 'Hello!' }),
+])
 ```
 
----
-
-## Getting Your Tokens
-
-### Facebook Page Access Token
-
-1. Go to [developers.facebook.com](https://developers.facebook.com) and create an App
-2. Add the **Pages API** product to your app
-3. Request the following permissions:
-   - `pages_manage_posts`
-   - `pages_read_engagement`
-4. Use the [Graph API Explorer](https://developers.facebook.com/tools/explorer/) to generate a **Page Access Token**
-5. Find your **Page ID**: go to your Facebook Page → About → Page transparency
-
-### Instagram Access Token & User ID
-
-1. Connect your Instagram account to a Facebook Page
-2. Make sure the Instagram account is set to **Business** or **Creator**
-3. Add the **Instagram Graph API** product to your Facebook App
-4. Request additional permissions:
-   - `instagram_basic`
-   - `instagram_content_publish`
-5. Get your Instagram User ID:
-   ```bash
-   # Step 1 — get the Page ID
-   curl "https://graph.facebook.com/v22.0/me/accounts?access_token=TOKEN"
-
-   # Step 2 — get the IG User ID from the Page
-   curl "https://graph.facebook.com/v22.0/PAGE_ID?fields=instagram_business_account&access_token=TOKEN"
-   ```
-
----
-
-## Facebook API
-
-### `postText(input)`
-
-Post a text message to your Facebook Page.
-
-```ts
-const result = await client.facebook.postText({
-  message: 'Hello World!',       // required
-  link: 'https://example.com',   // optional — attaches a link preview
-  published: true,               // optional — default: true
-})
-```
-
-### `postPhoto(input)`
-
-Post a single image to your Facebook Page.
-
-```ts
-const result = await client.facebook.postPhoto({
-  imageUrl: 'https://example.com/photo.jpg',  // required — must be publicly accessible
-  message: 'Check this out!',                 // optional
-  published: true,                            // optional — default: true
-})
-```
-
-### `postAlbum(input)`
-
-Post a multi-photo album (2–10 images) to your Facebook Page.
-
-```ts
-const result = await client.facebook.postAlbum({
-  imageUrls: [
-    'https://example.com/photo1.jpg',
-    'https://example.com/photo2.jpg',
-  ],
-  message: 'My photo album',  // optional
-})
-```
-
-### `postVideo(input)`
-
-Post a video to your Facebook Page.
-
-```ts
-const result = await client.facebook.postVideo({
-  videoUrl: 'https://example.com/video.mp4',  // required — must be publicly accessible
-  title: 'My video',                          // optional
-  description: 'A short description',         // optional
-  published: true,                            // optional — default: true
-})
-```
-
----
-
-## Instagram API
-
-> **Note:** All Instagram posts go through a two-step flow: create a media container → poll for processing → publish. This is handled automatically by the SDK.
-
-### `postImage(input)`
-
-Post a single image to Instagram.
-
-```ts
-const result = await client.instagram.postImage({
-  imageUrl: 'https://example.com/photo.jpg',  // required — must be publicly accessible
-  caption: 'My caption #hashtag',             // optional — max 2200 chars
-  locationId: '123456789',                    // optional
-  userTags: [                                 // optional
-    { username: 'someone', x: 0.5, y: 0.5 },
-  ],
-})
-```
-
-### `postVideo(input)`
-
-Post a video or Reel to Instagram.
-
-```ts
-const result = await client.instagram.postVideo({
-  videoUrl: 'https://example.com/video.mp4',  // required
-  caption: 'My Reel caption',                 // optional
-  mediaType: 'REELS',                         // 'VIDEO' | 'REELS' — default: 'VIDEO'
-  thumbOffset: 1000,                          // optional — thumbnail time in ms
-})
-```
-
-### `postCarousel(input)`
-
-Post a carousel of 2–10 images or videos to Instagram.
-
-```ts
-const result = await client.instagram.postCarousel({
-  items: [
-    { type: 'IMAGE', imageUrl: 'https://example.com/a.jpg' },
-    { type: 'IMAGE', imageUrl: 'https://example.com/b.jpg' },
-    { type: 'VIDEO', videoUrl: 'https://example.com/c.mp4' },
-  ],
-  caption: 'Carousel caption',  // optional
-  locationId: '123456789',      // optional
-})
-```
+All platforms are optional — only configure the ones you need.
 
 ---
 
 ## PostResult
 
-All methods return a `PostResult` object:
+Every method returns a `PostResult`:
 
 ```ts
 interface PostResult {
-  id: string        // The platform-assigned post ID
-  platform: 'facebook' | 'instagram'
-  createdAt: string // ISO 8601 timestamp
+  id: string        // platform-assigned post ID
+  platform: string  // 'facebook' | 'instagram' | 'threads' | ...
+  createdAt: string // ISO 8601
 }
 ```
 
 ---
 
-## Configuration Options
+## Platform APIs
 
-### `FacebookConfig`
+### Facebook
 
-| Option | Type | Required | Default | Description |
-|--------|------|----------|---------|-------------|
-| `pageId` | `string` | ✅ | — | Facebook Page ID |
-| `accessToken` | `string` | ✅ | — | Page Access Token |
-| `apiVersion` | `string` | — | `'v22.0'` | Graph API version |
+```ts
+import { FacebookClient } from 'social-posts-sdk'
 
-### `InstagramConfig`
+const fb = new FacebookClient({ pageId: 'PAGE_ID', accessToken: 'PAGE_TOKEN' })
 
-| Option | Type | Required | Default | Description |
-|--------|------|----------|---------|-------------|
-| `igUserId` | `string` | ✅ | — | Instagram Business/Creator User ID |
-| `accessToken` | `string` | ✅ | — | Access Token |
-| `apiVersion` | `string` | — | `'v22.0'` | Graph API version |
-| `pollIntervalMs` | `number` | — | `3000` | Milliseconds between status polling attempts |
-| `pollMaxAttempts` | `number` | — | `20` | Maximum polling attempts before giving up |
+await fb.postText({ message: 'Hello!', link?: 'https://...' })
+await fb.postPhoto({ imageUrl: 'https://...', message?: '...' })
+await fb.postAlbum({ imageUrls: ['https://...', 'https://...'], message?: '...' })
+await fb.postVideo({ videoUrl: 'https://...', title?: '...', description?: '...' })
+```
+
+**Token:** Page Access Token with `pages_manage_posts` permission.
+
+---
+
+### Instagram
+
+```ts
+import { InstagramClient } from 'social-posts-sdk'
+
+const ig = new InstagramClient({ igUserId: 'IG_USER_ID', accessToken: 'TOKEN' })
+
+await ig.postImage({ imageUrl: 'https://...', caption?: '...', userTags?: [...] })
+await ig.postVideo({ videoUrl: 'https://...', mediaType?: 'VIDEO' | 'REELS', caption?: '...' })
+await ig.postCarousel({ items: [{ type: 'IMAGE', imageUrl: '...' }, ...], caption?: '...' })
+```
+
+**Token:** Page Access Token with `instagram_basic`, `instagram_content_publish`.
+**Note:** Account must be connected to a Facebook Page and set to Business/Creator.
+
+---
+
+### Threads
+
+```ts
+import { ThreadsClient } from 'social-posts-sdk'
+
+const threads = new ThreadsClient({ userId: 'USER_ID', accessToken: 'TOKEN' })
+
+await threads.postText({ text: 'Hello!', replyToId?: '...' })
+await threads.postImage({ imageUrl: 'https://...', text?: '...' })
+await threads.postVideo({ videoUrl: 'https://...', text?: '...' })
+await threads.postCarousel({ items: [...], text?: '...' })  // up to 20 items
+```
+
+**Token:** User Access Token with `threads_basic`, `threads_content_publish`.
+
+---
+
+### Twitter / X
+
+```ts
+import { TwitterClient } from 'social-posts-sdk'
+
+const twitter = new TwitterClient({
+  accessToken: 'OAUTH2_USER_TOKEN',
+  // Required only for postImages / postVideo:
+  oauth1: { consumerKey, consumerSecret, accessToken, accessTokenSecret },
+})
+
+await twitter.postText({ text: 'Hello!', replyToTweetId?: '...' })
+await twitter.postImages({ imageUrls: ['https://...'], text?: '...' }) // up to 4 images
+await twitter.postVideo({ videoUrl: 'https://...', text?: '...' })
+```
+
+**Token:** OAuth 2.0 user access token with `tweet.write`. Media uploads additionally require OAuth 1.0a credentials.
+
+---
+
+### LinkedIn
+
+```ts
+import { LinkedInClient } from 'social-posts-sdk'
+
+const li = new LinkedInClient({ accessToken: 'OAUTH2_TOKEN' })
+
+// authorUrn: "urn:li:organization:12345" or "urn:li:person:xxxx"
+await li.postText({ text: '...', authorUrn: 'urn:li:organization:12345' })
+await li.postImage({ imageUrl: 'https://...', text?: '...', authorUrn: '...' })
+await li.postVideo({ videoUrl: 'https://...', text?: '...', authorUrn: '...' })
+```
+
+**Token:** OAuth 2.0 token with `w_member_social` (personal) or `w_organization_social` (pages).
+
+---
+
+### TikTok
+
+```ts
+import { TikTokClient } from 'social-posts-sdk'
+
+const tiktok = new TikTokClient({ accessToken: 'TOKEN' })
+
+await tiktok.postVideo({
+  videoUrl: 'https://...',
+  title?: '...',
+  description?: '...',
+  privacyLevel?: 'PUBLIC_TO_EVERYONE' | 'SELF_ONLY', // default: SELF_ONLY
+})
+await tiktok.postPhotos({ photoUrls: ['https://...', 'https://...'], title?: '...' })
+```
+
+**Token:** OAuth 2.0 token with `video.publish` scope.
+**Note:** Video URLs must be publicly accessible (SDK uses PULL_FROM_URL).
+
+---
+
+### YouTube
+
+```ts
+import { YouTubeClient } from 'social-posts-sdk'
+
+const yt = new YouTubeClient({ accessToken: 'OAUTH2_TOKEN' })
+
+await yt.uploadVideo({
+  videoUrl: 'https://...',   // SDK downloads and streams to YouTube
+  title: 'My Video',
+  description?: '...',
+  tags?: ['tag1', 'tag2'],
+  categoryId?: '22',         // 22 = People & Blogs
+  privacyStatus?: 'public' | 'private' | 'unlisted',
+  madeForKids?: false,
+})
+```
+
+**Token:** OAuth 2.0 token with `https://www.googleapis.com/auth/youtube.upload` scope.
+
+---
+
+### Pinterest
+
+```ts
+import { PinterestClient } from 'social-posts-sdk'
+
+const pinterest = new PinterestClient({ accessToken: 'TOKEN' })
+
+await pinterest.createPin({
+  boardId: 'BOARD_ID',
+  imageUrl: 'https://...',
+  title?: '...',
+  description?: '...',
+  link?: 'https://...',
+  altText?: '...',
+  boardSectionId?: '...',
+})
+```
+
+**Token:** OAuth 2.0 token with `pins:write`, `boards:read`.
+
+---
+
+### Telegram
+
+```ts
+import { TelegramClient } from 'social-posts-sdk'
+
+const tg = new TelegramClient({ botToken: 'BOT_TOKEN' })
+
+await tg.sendMessage({ chatId: '@channel', text: '<b>Hello!</b>', parseMode?: 'HTML' })
+await tg.sendPhoto({ chatId: '@channel', photoUrl: 'https://...', caption?: '...' })
+await tg.sendVideo({ chatId: '@channel', videoUrl: 'https://...', caption?: '...' })
+await tg.sendAlbum({
+  chatId: '@channel',
+  media: [
+    { type: 'photo', photoUrl: 'https://...' },
+    { type: 'video', videoUrl: 'https://...' },
+  ],
+})
+```
+
+**Token:** Telegram Bot Token from [@BotFather](https://t.me/BotFather).
+
+---
+
+### Zalo
+
+```ts
+import { ZaloClient } from 'social-posts-sdk'
+
+const zalo = new ZaloClient({ accessToken: 'OA_ACCESS_TOKEN' })
+
+await zalo.postFeed({ message: 'Hello!', photoUrls?: ['https://...'] })
+```
+
+**Token:** OA Access Token from [Zalo Developers](https://developers.zalo.me).
 
 ---
 
 ## Error Handling
 
 ```ts
-import {
-  SocialSDKError,
-  AuthError,
-  RateLimitError,
-  ValidationError,
-} from 'social-posts-sdk'
+import { SocialSDKError, AuthError, RateLimitError, ValidationError } from 'social-posts-sdk'
 
 try {
-  await client.facebook.postText({ message: 'Hello' })
+  await client.facebook?.postText({ message: 'Hello' })
 } catch (err) {
   if (err instanceof ValidationError) {
-    // Bad input — check err.issues[] for details
-    console.error('Invalid input:', err.issues)
+    console.error('Bad input:', err.issues)
   } else if (err instanceof AuthError) {
-    // Token is invalid or expired (Graph API codes 190, 102)
-    console.error('Auth failed — refresh your access token')
+    console.error('Token invalid or expired')
   } else if (err instanceof RateLimitError) {
-    // Rate limit hit (Graph API codes 613, 32, 4)
-    console.error('Rate limited — back off and retry later')
+    console.error('Rate limit hit — back off and retry')
   } else if (err instanceof SocialSDKError) {
-    // Other Graph API error
-    console.error(`Graph API error [${err.code}]:`, err.message)
+    console.error(`[${err.platform}] error ${err.code}:`, err.message)
   }
 }
 ```
 
-| Error class | When it's thrown |
-|-------------|-----------------|
-| `ValidationError` | Input fails Zod schema validation before any request is made |
-| `AuthError` | Graph API returns error code 190, 102, or 2500 (invalid/expired token) |
-| `RateLimitError` | Graph API returns error code 613, 32, 4, or 17 (rate limit) |
-| `SocialSDKError` | Any other Graph API error — base class for all SDK errors |
-
 ---
 
-## Cross-posting Example
+## Configuration Reference
 
-Post to Facebook and Instagram at the same time:
+### Facebook
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `pageId` | ✅ | — | Facebook Page ID |
+| `accessToken` | ✅ | — | Page Access Token |
+| `apiVersion` | — | `v22.0` | Graph API version |
 
-```ts
-const [fbResult, igResult] = await Promise.all([
-  client.facebook.postPhoto({
-    imageUrl: 'https://example.com/photo.jpg',
-    message: 'Cross-posting!',
-  }),
-  client.instagram.postImage({
-    imageUrl: 'https://example.com/photo.jpg',
-    caption: 'Cross-posting!',
-  }),
-])
-```
+### Instagram / Threads
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `igUserId` / `userId` | ✅ | — | User ID |
+| `accessToken` | ✅ | — | Access Token |
+| `apiVersion` | — | `v22.0` | Graph API version |
+| `pollIntervalMs` | — | `3000` | Status poll interval (ms) |
+| `pollMaxAttempts` | — | `20` | Max poll attempts |
+
+### TikTok
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `accessToken` | ✅ | — | OAuth 2.0 Access Token |
+| `pollIntervalMs` | — | `5000` | Status poll interval (ms) |
+| `pollMaxAttempts` | — | `24` | Max poll attempts |
 
 ---
 
 ## Examples
 
-See the [`examples/`](examples/) directory:
+See [`examples/`](examples/):
 
-- [`examples/facebook.ts`](examples/facebook.ts) — All Facebook post types
-- [`examples/instagram.ts`](examples/instagram.ts) — All Instagram post types
-- [`examples/combined.ts`](examples/combined.ts) — Cross-posting to both platforms
+| File | Platform |
+|------|---------|
+| [`examples/facebook.ts`](examples/facebook.ts) | Facebook |
+| [`examples/instagram.ts`](examples/instagram.ts) | Instagram |
+| [`examples/threads.ts`](examples/threads.ts) | Threads |
+| [`examples/twitter.ts`](examples/twitter.ts) | Twitter / X |
+| [`examples/linkedin.ts`](examples/linkedin.ts) | LinkedIn |
+| [`examples/tiktok.ts`](examples/tiktok.ts) | TikTok |
+| [`examples/youtube.ts`](examples/youtube.ts) | YouTube |
+| [`examples/pinterest.ts`](examples/pinterest.ts) | Pinterest |
+| [`examples/telegram.ts`](examples/telegram.ts) | Telegram |
+| [`examples/zalo.ts`](examples/zalo.ts) | Zalo |
+| [`examples/combined.ts`](examples/combined.ts) | Facebook + Instagram cross-post |
 
 Run an example:
-
 ```bash
 FB_PAGE_ID=xxx FB_ACCESS_TOKEN=yyy npx tsx examples/facebook.ts
+TELEGRAM_BOT_TOKEN=xxx TELEGRAM_CHAT_ID=@chan npx tsx examples/telegram.ts
 ```
 
 ---

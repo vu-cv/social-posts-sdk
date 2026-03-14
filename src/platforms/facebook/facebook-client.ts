@@ -1,4 +1,4 @@
-import { HttpClient } from '../../http/http-client.js'
+import { HttpClient, graphErrorParser } from '../../http/http-client.js'
 import { ValidationError } from '../../errors/index.js'
 import type { FacebookConfig, PostResult } from '../../types/index.js'
 import {
@@ -22,11 +22,13 @@ export class FacebookClient {
   constructor(config: FacebookConfig) {
     const apiVersion = config.apiVersion ?? 'v22.0'
     this.#pageId = config.pageId
-    this.#http = new HttpClient(
-      `https://graph.facebook.com/${apiVersion}`,
-      config.accessToken,
-      'facebook',
-    )
+    this.#http = new HttpClient({
+      baseUrl: `https://graph.facebook.com/${apiVersion}`,
+      platform: 'facebook',
+      defaultParams: { access_token: config.accessToken },
+      parseError: graphErrorParser,
+      checkGraphApiErrors: true,
+    })
   }
 
   /**
