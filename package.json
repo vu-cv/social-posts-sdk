@@ -40,6 +40,14 @@
     "post", "publish", "automation", "marketing"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vu-cv/social-posts-sdk.git"
+  },
+  "homepage": "https://github.com/vu-cv/social-posts-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/vu-cv/social-posts-sdk/issues"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^3.0.0",
