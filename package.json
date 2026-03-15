@@ -1,6 +1,6 @@
 {
   "name": "social-posts-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript SDK for posting to social media: Facebook, Instagram, Threads, Twitter/X, LinkedIn, TikTok, YouTube, Pinterest, Telegram, Zalo",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -18,7 +18,9 @@
       }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "engines": {
     "node": ">=22"
@@ -34,10 +36,25 @@
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [
-    "social-media", "social-posts", "sdk", "typescript",
-    "facebook", "instagram", "threads", "twitter", "x",
-    "linkedin", "tiktok", "youtube", "pinterest", "telegram", "zalo",
-    "post", "publish", "automation", "marketing"
+    "social-media",
+    "social-posts",
+    "sdk",
+    "typescript",
+    "facebook",
+    "instagram",
+    "threads",
+    "twitter",
+    "x",
+    "linkedin",
+    "tiktok",
+    "youtube",
+    "pinterest",
+    "telegram",
+    "zalo",
+    "post",
+    "publish",
+    "automation",
+    "marketing"
   ],
   "license": "MIT",
   "repository": {
