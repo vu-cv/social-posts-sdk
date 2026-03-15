@@ -4,6 +4,7 @@ import { HttpClient, bearerErrorParser } from '../../http/http-client.js'
 import { AuthError, RateLimitError, SocialSDKError, ValidationError, type Platform } from '../../errors/index.js'
 import type { PostResult } from '../../types/index.js'
 import type { TwitterConfig } from '../../types/index.js'
+import type { PostInfo } from '../../types/post-info.js'
 import {
   TwitterPostTextInputSchema,
   TwitterPostImagesInputSchema,
@@ -15,6 +16,8 @@ import {
   type MediaUploadInitResponse,
   type MediaUploadFinalizeResponse,
   type MediaUploadStatusResponse,
+  type TwitterGetTweetResponse,
+  type TwitterDeleteTweetResponse,
 } from './twitter.types.js'
 
 const PLATFORM: Platform = 'twitter'
@@ -123,6 +126,32 @@ export class TwitterClient {
 
     const response = await this.#http.post<TweetResponse>('/tweets', body)
     return { id: response.data.id, platform: PLATFORM, createdAt: new Date().toISOString() }
+  }
+
+  /** Fetch a tweet by its ID and return normalised PostInfo. */
+  async getTweet(tweetId: string): Promise<PostInfo> {
+    const raw = await this.#http.get<TwitterGetTweetResponse>(`/tweets/${tweetId}`, {
+      'tweet.fields': 'text,created_at,public_metrics',
+    })
+    return {
+      id: raw.data.id,
+      platform: PLATFORM,
+      content: raw.data.text,
+      url: `https://twitter.com/i/web/status/${raw.data.id}`,
+      createdAt: raw.data.created_at ?? null,
+      metrics: {
+        likes: raw.data.public_metrics?.like_count ?? null,
+        comments: raw.data.public_metrics?.reply_count ?? null,
+        shares: raw.data.public_metrics?.retweet_count ?? null,
+        views: raw.data.public_metrics?.impression_count ?? null,
+      },
+      raw,
+    }
+  }
+
+  /** Delete a tweet by its ID. */
+  async deleteTweet(tweetId: string): Promise<void> {
+    await this.#http.delete<TwitterDeleteTweetResponse>(`/tweets/${tweetId}`)
   }
 
   async #uploadMedia(mediaUrl: string, mediaCategory: string): Promise<string> {

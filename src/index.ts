@@ -109,3 +109,55 @@ export {
   RateLimitError,
   ValidationError,
 } from './errors/index.js'
+
+// HTTP / retry
+export type { RetryConfig } from './http/retry.js'
+
+// Normalised post info (getPost results)
+export type { PostInfo, PostMetrics } from './types/post-info.js'
+
+// Token refresh utilities
+export {
+  refreshMetaToken,
+  refreshMetaPageToken,
+  refreshTwitterToken,
+  refreshLinkedInToken,
+  refreshGoogleToken,
+  refreshTikTokToken,
+  refreshPinterestToken,
+} from './token-refresh/index.js'
+export type {
+  MetaTokenResponse,
+  TwitterTokenResponse,
+  LinkedInTokenResponse,
+  GoogleTokenResponse,
+  TikTokTokenResponse,
+  PinterestTokenResponse,
+} from './token-refresh/index.js'
+
+// OAuth helpers (generate auth URLs + exchange codes)
+export {
+  getMetaAuthUrl,
+  exchangeMetaCode,
+  getTwitterAuthUrl,
+  exchangeTwitterCode,
+  getLinkedInAuthUrl,
+  exchangeLinkedInCode,
+  getGoogleAuthUrl,
+  exchangeGoogleCode,
+  getTikTokAuthUrl,
+  exchangeTikTokCode,
+  getPinterestAuthUrl,
+  exchangePinterestCode,
+  getZaloAuthUrl,
+  exchangeZaloCode,
+} from './oauth/index.js'
+export type {
+  MetaCodeExchangeResponse,
+  TwitterCodeExchangeResponse,
+  LinkedInCodeExchangeResponse,
+  GoogleCodeExchangeResponse,
+  TikTokCodeExchangeResponse,
+  PinterestCodeExchangeResponse,
+  ZaloCodeExchangeResponse,
+} from './oauth/index.js'

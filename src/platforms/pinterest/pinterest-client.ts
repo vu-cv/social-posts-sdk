@@ -2,10 +2,12 @@ import { HttpClient, bearerErrorParser } from '../../http/http-client.js'
 import { ValidationError } from '../../errors/index.js'
 import type { PostResult } from '../../types/index.js'
 import type { PinterestConfig } from '../../types/index.js'
+import type { PostInfo } from '../../types/post-info.js'
 import {
   PinterestCreatePinInputSchema,
   type PinterestCreatePinInput,
   type PinterestPinResponse,
+  type PinterestGetPinResponse,
 } from './pinterest.types.js'
 
 export class PinterestClient {
@@ -39,5 +41,24 @@ export class PinterestClient {
 
     const response = await this.#http.post<PinterestPinResponse>('/pins', body)
     return { id: response.id, platform: 'pinterest', createdAt: new Date().toISOString() }
+  }
+
+  /** Fetch a pin by its ID and return normalised PostInfo. */
+  async getPin(pinId: string): Promise<PostInfo> {
+    const raw = await this.#http.get<PinterestGetPinResponse>(`/pins/${pinId}`)
+    return {
+      id: raw.id,
+      platform: 'pinterest',
+      content: raw.title ?? raw.description ?? null,
+      url: raw.link ?? null,
+      createdAt: raw.created_at ?? null,
+      metrics: { likes: null, comments: null, shares: null, views: null },
+      raw,
+    }
+  }
+
+  /** Delete a pin by its ID. */
+  async deletePin(pinId: string): Promise<void> {
+    await this.#http.delete<void>(`/pins/${pinId}`)
   }
 }

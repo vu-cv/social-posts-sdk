@@ -3,6 +3,7 @@ import { HttpClient, bearerErrorParser } from '../../http/http-client.js'
 import { ValidationError } from '../../errors/index.js'
 import type { PostResult } from '../../types/index.js'
 import type { LinkedInConfig } from '../../types/index.js'
+import type { PostInfo } from '../../types/post-info.js'
 import {
   LinkedInPostTextInputSchema,
   LinkedInPostImageInputSchema,
@@ -12,6 +13,7 @@ import {
   type LinkedInPostVideoInput,
   type LinkedInRegisterUploadResponse,
   type LinkedInUgcPostResponse,
+  type LinkedInGetPostResponse,
 } from './linkedin.types.js'
 
 export class LinkedInClient {
@@ -64,6 +66,27 @@ export class LinkedInClient {
     const body = this.#buildPost(authorUrn, text ?? '', 'VIDEO', visibility, media)
     const response = await this.#http.post<LinkedInUgcPostResponse>('/ugcPosts', body)
     return { id: response.id, platform: 'linkedin', createdAt: new Date().toISOString() }
+  }
+
+  /** Fetch a ugcPost by its URN and return normalised PostInfo. */
+  async getPost(postUrn: string): Promise<PostInfo> {
+    const raw = await this.#http.get<LinkedInGetPostResponse>(`/ugcPosts/${encodeURIComponent(postUrn)}`)
+    const text = raw.specificContent?.['com.linkedin.ugc.ShareContent']?.shareCommentary?.text ?? null
+    const createdAt = raw.created?.time != null ? new Date(raw.created.time).toISOString() : null
+    return {
+      id: postUrn,
+      platform: 'linkedin',
+      content: text,
+      url: null,
+      createdAt,
+      metrics: { likes: null, comments: null, shares: null, views: null },
+      raw,
+    }
+  }
+
+  /** Delete a ugcPost by its URN. */
+  async deletePost(postUrn: string): Promise<void> {
+    await this.#http.delete<void>(`/ugcPosts/${encodeURIComponent(postUrn)}`)
   }
 
   async #uploadAsset(authorUrn: string, mediaUrl: string, recipe: string): Promise<string> {

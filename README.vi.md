@@ -273,6 +273,170 @@ await zalo.postFeed({ message: 'Xin chào!', photoUrls?: ['https://...'] })
 
 ---
 
+## Đọc bài đăng
+
+```ts
+import type { PostInfo } from 'social-posts-sdk'
+
+const info: PostInfo = await client.facebook!.getPost('post_id')
+// info.id, info.platform, info.content, info.url, info.createdAt, info.metrics, info.raw
+
+const tweet: PostInfo = await client.twitter!.getTweet('tweet_id')
+const video: PostInfo = await client.youtube!.getVideo('video_id')
+const pin:   PostInfo = await client.pinterest!.getPin('pin_id')
+```
+
+Cấu trúc `PostInfo`:
+```ts
+interface PostInfo {
+  id: string
+  platform: string
+  content: string | null      // nội dung / caption / tiêu đề
+  url: string | null          // đường link trực tiếp
+  createdAt: string | null    // ISO 8601
+  metrics: {
+    likes: number | null
+    comments: number | null
+    shares: number | null
+    views: number | null
+  }
+  raw: unknown                // dữ liệu gốc từ API
+}
+```
+
+---
+
+## Xoá & Cập nhật bài đăng
+
+```ts
+// Xoá
+await client.facebook!.deletePost('post_id')
+await client.instagram!.deletePost('media_id')
+await client.threads!.deletePost('media_id')
+await client.twitter!.deleteTweet('tweet_id')
+await client.linkedin!.deletePost('urn:li:ugcPost:123')
+await client.youtube!.deleteVideo('video_id')
+await client.pinterest!.deletePin('pin_id')
+
+// Cập nhật (các nền tảng hỗ trợ)
+await client.facebook!.updatePost('post_id', { message: 'Nội dung mới' })
+await client.youtube!.updateVideo('video_id', {
+  title: 'Tiêu đề mới',
+  description: 'Mô tả mới',
+  tags: ['tag1'],
+  categoryId: '22',
+})
+```
+
+---
+
+## Retry & Exponential Backoff
+
+Truyền cấu hình `retry` vào bất kỳ platform client nào để tự động thử lại khi gặp rate-limit hoặc lỗi 5xx:
+
+```ts
+import { FacebookClient } from 'social-posts-sdk'
+import type { RetryConfig } from 'social-posts-sdk'
+
+const retry: RetryConfig = {
+  maxAttempts: 5,       // mặc định: 3
+  initialDelayMs: 500,  // mặc định: 1000
+  maxDelayMs: 30_000,   // mặc định: 30_000
+  factor: 2,            // mặc định: 2 (tăng theo cấp số nhân)
+}
+
+const fb = new FacebookClient({
+  pageId: 'PAGE_ID',
+  accessToken: 'TOKEN',
+  retry,
+})
+```
+
+Quy tắc retry:
+- **Có retry**: `RateLimitError`, lỗi mạng, `SocialSDKError` 5xx
+- **Không retry**: `AuthError`, `ValidationError`, lỗi 4xx
+
+---
+
+## Làm mới Token
+
+```ts
+import {
+  refreshMetaToken,     // Facebook / Instagram / Threads
+  refreshTwitterToken,
+  refreshLinkedInToken,
+  refreshGoogleToken,   // YouTube
+  refreshTikTokToken,
+  refreshPinterestToken,
+} from 'social-posts-sdk'
+
+// Đổi short-lived Meta token lấy long-lived token (60 ngày)
+const { access_token } = await refreshMetaToken({
+  clientId: 'APP_ID',
+  clientSecret: 'APP_SECRET',
+  shortLivedToken: 'SHORT_TOKEN',
+})
+
+// Làm mới Twitter OAuth 2.0 token
+const tokens = await refreshTwitterToken({
+  clientId: 'CLIENT_ID',
+  clientSecret: 'CLIENT_SECRET',
+  refreshToken: 'REFRESH_TOKEN',
+})
+```
+
+---
+
+## OAuth Flow
+
+Tạo link đăng nhập và đổi code lấy token:
+
+```ts
+import {
+  getMetaAuthUrl, exchangeMetaCode,
+  getTwitterAuthUrl, exchangeTwitterCode,
+  getLinkedInAuthUrl, exchangeLinkedInCode,
+  getGoogleAuthUrl, exchangeGoogleCode,
+  getTikTokAuthUrl, exchangeTikTokCode,
+  getPinterestAuthUrl, exchangePinterestCode,
+  getZaloAuthUrl, exchangeZaloCode,
+} from 'social-posts-sdk'
+
+// Bước 1: Chuyển hướng user đến trang đăng nhập
+const url = getMetaAuthUrl({
+  clientId: 'APP_ID',
+  redirectUri: 'https://yourapp.com/callback',
+  scopes: ['pages_manage_posts', 'instagram_content_publish'],
+  state: 'csrf_token',
+})
+
+// Bước 2: Nhận code từ callback, đổi lấy token
+const { access_token } = await exchangeMetaCode({
+  clientId: 'APP_ID',
+  clientSecret: 'APP_SECRET',
+  redirectUri: 'https://yourapp.com/callback',
+  code: req.query.code,
+})
+
+// Twitter dùng PKCE — lưu codeVerifier giữa 2 bước
+const { url: twUrl, codeVerifier } = await getTwitterAuthUrl({
+  clientId: 'CLIENT_ID',
+  redirectUri: 'https://yourapp.com/tw/callback',
+  scopes: ['tweet.read', 'tweet.write', 'offline.access'],
+  state: 'csrf_token',
+})
+
+const twTokens = await exchangeTwitterCode({
+  clientId: 'CLIENT_ID',
+  clientSecret: 'CLIENT_SECRET',
+  redirectUri: 'https://yourapp.com/tw/callback',
+  code: req.query.code,
+  codeVerifier,   // từ bước 1
+})
+```
+
+---
+
 ## Xử lý lỗi
 
 ```ts

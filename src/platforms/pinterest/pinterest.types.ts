@@ -24,3 +24,11 @@ export interface PinterestPinResponse {
   board_id: string
   media: { media_type: string }
 }
+
+export interface PinterestGetPinResponse {
+  id: string
+  title?: string | null
+  description?: string | null
+  link?: string | null
+  created_at?: string
+}

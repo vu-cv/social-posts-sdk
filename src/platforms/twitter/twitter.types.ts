@@ -38,3 +38,21 @@ export interface MediaUploadStatusResponse {
   media_id_string: string
   processing_info: { state: 'pending' | 'in_progress' | 'failed' | 'succeeded'; error?: { message: string } }
 }
+
+export interface TwitterGetTweetResponse {
+  data: {
+    id: string
+    text: string
+    created_at?: string
+    public_metrics?: {
+      like_count?: number
+      reply_count?: number
+      retweet_count?: number
+      impression_count?: number
+    }
+  }
+}
+
+export interface TwitterDeleteTweetResponse {
+  data: { deleted: boolean }
+}

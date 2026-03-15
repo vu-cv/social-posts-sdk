@@ -62,3 +62,14 @@ export interface PhotoPostResponse {
 export interface VideoPostResponse {
   id: string
 }
+
+export interface FacebookPostResponse {
+  id: string
+  message?: string
+  story?: string
+  permalink_url?: string
+  created_time?: string
+  likes?: { summary?: { total_count?: number } }
+  comments?: { summary?: { total_count?: number } }
+  shares?: { count?: number }
+}

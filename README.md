@@ -273,6 +273,172 @@ await zalo.postFeed({ message: 'Hello!', photoUrls?: ['https://...'] })
 
 ---
 
+## Reading Posts
+
+Every platform that supports it exposes a typed `getPost` / `getTweet` / `getVideo` / `getPin` method returning a normalised `PostInfo`:
+
+```ts
+import type { PostInfo } from 'social-posts-sdk'
+
+const info: PostInfo = await client.facebook!.getPost('post_id')
+// info.id, info.platform, info.content, info.url, info.createdAt, info.metrics, info.raw
+
+const tweet: PostInfo = await client.twitter!.getTweet('tweet_id')
+const video: PostInfo = await client.youtube!.getVideo('video_id')
+const pin:   PostInfo = await client.pinterest!.getPin('pin_id')
+```
+
+`PostInfo` shape:
+```ts
+interface PostInfo {
+  id: string
+  platform: string
+  content: string | null      // message / caption / title
+  url: string | null          // permalink
+  createdAt: string | null    // ISO 8601
+  metrics: {
+    likes: number | null
+    comments: number | null
+    shares: number | null
+    views: number | null
+  }
+  raw: unknown                // full API response
+}
+```
+
+---
+
+## Deleting & Updating Posts
+
+```ts
+// Delete
+await client.facebook!.deletePost('post_id')
+await client.instagram!.deletePost('media_id')
+await client.threads!.deletePost('media_id')
+await client.twitter!.deleteTweet('tweet_id')
+await client.linkedin!.deletePost('urn:li:ugcPost:123')
+await client.youtube!.deleteVideo('video_id')
+await client.pinterest!.deletePin('pin_id')
+
+// Update (platforms that support it)
+await client.facebook!.updatePost('post_id', { message: 'New text' })
+await client.youtube!.updateVideo('video_id', {
+  title: 'New title',
+  description: 'New description',
+  tags: ['tag1'],
+  categoryId: '22',
+})
+```
+
+---
+
+## Retry & Exponential Backoff
+
+Pass `retry` config to any platform client to enable automatic retry on rate-limits and 5xx errors:
+
+```ts
+import { FacebookClient } from 'social-posts-sdk'
+import type { RetryConfig } from 'social-posts-sdk'
+
+const retry: RetryConfig = {
+  maxAttempts: 5,       // default: 3
+  initialDelayMs: 500,  // default: 1000
+  maxDelayMs: 30_000,   // default: 30_000
+  factor: 2,            // default: 2 (exponential)
+}
+
+const fb = new FacebookClient({
+  pageId: 'PAGE_ID',
+  accessToken: 'TOKEN',
+  retry,
+})
+```
+
+Retry behaviour:
+- **Retried**: `RateLimitError`, network errors, 5xx `SocialSDKError`
+- **Not retried**: `AuthError`, `ValidationError`, 4xx errors
+
+---
+
+## Token Refresh
+
+```ts
+import {
+  refreshMetaToken,     // Facebook / Instagram / Threads
+  refreshTwitterToken,
+  refreshLinkedInToken,
+  refreshGoogleToken,   // YouTube
+  refreshTikTokToken,
+  refreshPinterestToken,
+} from 'social-posts-sdk'
+
+// Exchange short-lived Meta token for a 60-day long-lived token
+const { access_token } = await refreshMetaToken({
+  clientId: 'APP_ID',
+  clientSecret: 'APP_SECRET',
+  shortLivedToken: 'SHORT_TOKEN',
+})
+
+// Refresh Twitter OAuth 2.0 token
+const tokens = await refreshTwitterToken({
+  clientId: 'CLIENT_ID',
+  clientSecret: 'CLIENT_SECRET',
+  refreshToken: 'REFRESH_TOKEN',
+})
+```
+
+---
+
+## OAuth Flow
+
+Generate auth URLs and exchange authorization codes for tokens:
+
+```ts
+import {
+  getMetaAuthUrl, exchangeMetaCode,
+  getTwitterAuthUrl, exchangeTwitterCode,
+  getLinkedInAuthUrl, exchangeLinkedInCode,
+  getGoogleAuthUrl, exchangeGoogleCode,
+  getTikTokAuthUrl, exchangeTikTokCode,
+  getPinterestAuthUrl, exchangePinterestCode,
+  getZaloAuthUrl, exchangeZaloCode,
+} from 'social-posts-sdk'
+
+// Step 1: Redirect user
+const url = getMetaAuthUrl({
+  clientId: 'APP_ID',
+  redirectUri: 'https://yourapp.com/callback',
+  scopes: ['pages_manage_posts', 'instagram_content_publish'],
+  state: 'csrf_token',
+})
+
+// Step 2: Exchange code from callback
+const { access_token } = await exchangeMetaCode({
+  clientId: 'APP_ID',
+  clientSecret: 'APP_SECRET',
+  redirectUri: 'https://yourapp.com/callback',
+  code: req.query.code,
+})
+
+// Twitter uses PKCE — store codeVerifier between steps
+const { url: twUrl, codeVerifier } = await getTwitterAuthUrl({
+  clientId: 'CLIENT_ID',
+  redirectUri: 'https://yourapp.com/tw/callback',
+  scopes: ['tweet.read', 'tweet.write', 'offline.access'],
+  state: 'csrf_token',
+})
+
+const twTokens = await exchangeTwitterCode({
+  clientId: 'CLIENT_ID',
+  clientSecret: 'CLIENT_SECRET',
+  redirectUri: 'https://yourapp.com/tw/callback',
+  code: req.query.code,
+  codeVerifier,   // from step 1
+})
+```
+
+---
+
 ## Error Handling
 
 ```ts

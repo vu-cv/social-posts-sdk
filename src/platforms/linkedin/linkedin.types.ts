@@ -41,3 +41,13 @@ export interface LinkedInRegisterUploadResponse {
 export interface LinkedInUgcPostResponse {
   id: string
 }
+
+export interface LinkedInGetPostResponse {
+  id: string
+  specificContent?: {
+    'com.linkedin.ugc.ShareContent'?: {
+      shareCommentary?: { text?: string }
+    }
+  }
+  created?: { time?: number }
+}

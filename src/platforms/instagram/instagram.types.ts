@@ -73,3 +73,13 @@ export interface MediaStatusResponse {
   status_code: MediaStatusCode
   id: string
 }
+
+export interface InstagramMediaResponse {
+  id: string
+  caption?: string
+  permalink?: string
+  timestamp?: string
+  like_count?: number
+  comments_count?: number
+  media_type?: string
+}

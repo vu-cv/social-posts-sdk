@@ -1,6 +1,7 @@
 import { HttpClient, graphErrorParser } from '../../http/http-client.js'
 import { ValidationError } from '../../errors/index.js'
 import type { FacebookConfig, PostResult } from '../../types/index.js'
+import type { PostInfo } from '../../types/post-info.js'
 import {
   PostTextInputSchema,
   PostPhotoInputSchema,
@@ -13,6 +14,7 @@ import {
   type FeedPostResponse,
   type PhotoPostResponse,
   type VideoPostResponse,
+  type FacebookPostResponse,
 } from './facebook.types.js'
 
 export class FacebookClient {
@@ -134,6 +136,37 @@ export class FacebookClient {
     )
 
     return this.#toResult(response.id)
+  }
+
+  /** Fetch a post by its ID and return normalised PostInfo. */
+  async getPost(postId: string): Promise<PostInfo> {
+    const raw = await this.#http.get<FacebookPostResponse>(`/${postId}`, {
+      fields: 'id,message,story,permalink_url,created_time,likes.summary(true),comments.summary(true),shares',
+    })
+    return {
+      id: raw.id,
+      platform: 'facebook',
+      content: raw.message ?? raw.story ?? null,
+      url: raw.permalink_url ?? null,
+      createdAt: raw.created_time ?? null,
+      metrics: {
+        likes: raw.likes?.summary?.total_count ?? null,
+        comments: raw.comments?.summary?.total_count ?? null,
+        shares: raw.shares?.count ?? null,
+        views: null,
+      },
+      raw,
+    }
+  }
+
+  /** Delete a post by its ID. */
+  async deletePost(postId: string): Promise<void> {
+    await this.#http.delete<{ success: boolean }>(`/${postId}`)
+  }
+
+  /** Update the message of an existing post. */
+  async updatePost(postId: string, update: { message: string }): Promise<void> {
+    await this.#http.post<{ success: boolean }>(`/${postId}`, { message: update.message })
   }
 
   #toResult(id: string): PostResult {

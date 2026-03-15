@@ -25,18 +25,20 @@ function makeClient() {
 function mockAxiosInstance(responseData: unknown, status = 200) {
   const postMock = vi.fn().mockResolvedValue({ data: responseData, status })
   const getMock = vi.fn().mockResolvedValue({ data: responseData, status })
+  const deleteMock = vi.fn().mockResolvedValue({ data: { success: true }, status: 200 })
   const interceptorUse = vi.fn()
 
   const instance = {
     post: postMock,
     get: getMock,
+    delete: deleteMock,
     interceptors: {
       response: { use: interceptorUse },
     },
   }
 
   ;(axios.create as unknown as MockInstance).mockReturnValue(instance)
-  return { instance, postMock, getMock }
+  return { instance, postMock, getMock, deleteMock }
 }
 
 describe('FacebookClient', () => {
@@ -168,6 +170,71 @@ describe('FacebookClient', () => {
         expect.anything(),
       )
       expect(result.id).toBe('video_1')
+    })
+  })
+
+  describe('getPost()', () => {
+    it('fetches post fields and returns normalised PostInfo', async () => {
+      const raw = {
+        id: 'post_abc',
+        message: 'Hello from FB',
+        permalink_url: 'https://facebook.com/post_abc',
+        created_time: '2024-01-01T00:00:00+0000',
+        likes: { summary: { total_count: 42 } },
+        comments: { summary: { total_count: 5 } },
+        shares: { count: 3 },
+      }
+      const { getMock } = mockAxiosInstance(raw)
+      const client = makeClient()
+
+      const info = await client.getPost('post_abc')
+
+      expect(getMock).toHaveBeenCalledWith(
+        '/post_abc',
+        expect.objectContaining({ params: expect.objectContaining({ fields: expect.stringContaining('message') }) }),
+      )
+      expect(info).toMatchObject({
+        id: 'post_abc',
+        platform: 'facebook',
+        content: 'Hello from FB',
+        url: 'https://facebook.com/post_abc',
+        metrics: { likes: 42, comments: 5, shares: 3, views: null },
+      })
+    })
+
+    it('falls back to story when message is absent', async () => {
+      const raw = { id: 'post_s', story: 'User updated their cover photo.' }
+      mockAxiosInstance(raw)
+      const client = makeClient()
+
+      const info = await client.getPost('post_s')
+      expect(info.content).toBe('User updated their cover photo.')
+    })
+  })
+
+  describe('deletePost()', () => {
+    it('calls DELETE /{postId}', async () => {
+      const { deleteMock } = mockAxiosInstance({})
+      const client = makeClient()
+
+      await client.deletePost('post_del')
+
+      expect(deleteMock).toHaveBeenCalledWith('/post_del')
+    })
+  })
+
+  describe('updatePost()', () => {
+    it('calls POST /{postId} with new message', async () => {
+      const { postMock } = mockAxiosInstance({ success: true })
+      const client = makeClient()
+
+      await client.updatePost('post_upd', { message: 'Updated text' })
+
+      expect(postMock).toHaveBeenCalledWith(
+        '/post_upd',
+        expect.objectContaining({ message: 'Updated text' }),
+        expect.anything(),
+      )
     })
   })
 

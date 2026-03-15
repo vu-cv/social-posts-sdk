@@ -2,6 +2,7 @@ import { HttpClient, graphErrorParser } from '../../http/http-client.js'
 import { SocialSDKError, ValidationError } from '../../errors/index.js'
 import type { PostResult } from '../../types/index.js'
 import type { ThreadsConfig } from '../../types/index.js'
+import type { PostInfo } from '../../types/post-info.js'
 import {
   ThreadsPostTextInputSchema,
   ThreadsPostImageInputSchema,
@@ -14,6 +15,7 @@ import {
   type ThreadsContainerResponse,
   type ThreadsPublishResponse,
   type ThreadsStatusResponse,
+  type ThreadsPostResponse,
 } from './threads.types.js'
 
 export class ThreadsClient {
@@ -91,6 +93,32 @@ export class ThreadsClient {
 
     const container = await this.#http.post<ThreadsContainerResponse>(`/${this.#userId}/threads`, carouselBody)
     return this.#publish(container.id)
+  }
+
+  /** Fetch a Threads post by its ID and return normalised PostInfo. */
+  async getPost(mediaId: string): Promise<PostInfo> {
+    const raw = await this.#http.get<ThreadsPostResponse>(`/${mediaId}`, {
+      fields: 'id,text,timestamp,permalink,like_count,replies_count',
+    })
+    return {
+      id: raw.id,
+      platform: 'threads',
+      content: raw.text ?? null,
+      url: raw.permalink ?? null,
+      createdAt: raw.timestamp ?? null,
+      metrics: {
+        likes: raw.like_count ?? null,
+        comments: raw.replies_count ?? null,
+        shares: null,
+        views: null,
+      },
+      raw,
+    }
+  }
+
+  /** Delete a Threads post by its ID. */
+  async deletePost(mediaId: string): Promise<void> {
+    await this.#http.delete<{ success: boolean }>(`/${mediaId}`)
   }
 
   async #publish(containerId: string): Promise<PostResult> {

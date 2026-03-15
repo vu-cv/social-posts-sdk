@@ -37,3 +37,12 @@ export interface ThreadsContainerResponse { id: string }
 export interface ThreadsPublishResponse { id: string }
 export type ThreadsStatusCode = 'IN_PROGRESS' | 'FINISHED' | 'EXPIRED' | 'ERROR' | 'PUBLISHED'
 export interface ThreadsStatusResponse { status: ThreadsStatusCode; id: string }
+
+export interface ThreadsPostResponse {
+  id: string
+  text?: string
+  timestamp?: string
+  permalink?: string
+  like_count?: number
+  replies_count?: number
+}

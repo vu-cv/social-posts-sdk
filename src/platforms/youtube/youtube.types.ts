@@ -21,3 +21,19 @@ export interface YouTubeVideoResource {
   snippet: { title: string; description: string }
   status: { privacyStatus: YouTubePrivacyStatus }
 }
+
+export interface YouTubeVideoListResponse {
+  items?: Array<{
+    id: string
+    snippet?: {
+      title?: string
+      description?: string
+      publishedAt?: string
+    }
+    statistics?: {
+      viewCount?: string
+      likeCount?: string
+      commentCount?: string
+    }
+  }>
+}

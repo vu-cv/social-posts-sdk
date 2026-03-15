@@ -30,16 +30,18 @@ function makeClient(overrides?: Partial<ConstructorParameters<typeof InstagramCl
 function mockAxiosInstance() {
   const postMock = vi.fn()
   const getMock = vi.fn()
+  const deleteMock = vi.fn().mockResolvedValue({ data: { success: true } })
   const interceptorUse = vi.fn()
 
   const instance = {
     post: postMock,
     get: getMock,
+    delete: deleteMock,
     interceptors: { response: { use: interceptorUse } },
   }
 
   ;(axios.create as unknown as MockInstance).mockReturnValue(instance)
-  return { instance, postMock, getMock }
+  return { instance, postMock, getMock, deleteMock }
 }
 
 describe('InstagramClient', () => {
@@ -143,6 +145,48 @@ describe('InstagramClient', () => {
         expect.objectContaining({ media_type: 'REELS' }),
         expect.anything(),
       )
+    })
+  })
+
+  describe('getPost()', () => {
+    it('fetches media fields and returns normalised PostInfo', async () => {
+      const { getMock } = mockAxiosInstance()
+      const raw = {
+        id: 'media_123',
+        caption: 'Great photo!',
+        permalink: 'https://www.instagram.com/p/abc/',
+        timestamp: '2024-06-01T10:00:00+0000',
+        like_count: 100,
+        comments_count: 12,
+        media_type: 'IMAGE',
+      }
+      getMock.mockResolvedValue({ data: raw })
+      const client = makeClient()
+
+      const info = await client.getPost('media_123')
+
+      expect(getMock).toHaveBeenCalledWith(
+        '/media_123',
+        expect.objectContaining({ params: expect.objectContaining({ fields: expect.stringContaining('caption') }) }),
+      )
+      expect(info).toMatchObject({
+        id: 'media_123',
+        platform: 'instagram',
+        content: 'Great photo!',
+        url: 'https://www.instagram.com/p/abc/',
+        metrics: { likes: 100, comments: 12, shares: null, views: null },
+      })
+    })
+  })
+
+  describe('deletePost()', () => {
+    it('calls DELETE /{mediaId}', async () => {
+      const { deleteMock } = mockAxiosInstance()
+      const client = makeClient()
+
+      await client.deletePost('media_del')
+
+      expect(deleteMock).toHaveBeenCalledWith('/media_del')
     })
   })
 

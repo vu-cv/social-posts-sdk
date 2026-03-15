@@ -1,5 +1,6 @@
 import axios, { isAxiosError, type AxiosInstance, type AxiosResponse } from 'axios'
 import { createGraphError, SocialSDKError, AuthError, RateLimitError, type Platform } from '../errors/index.js'
+import { withRetry, type RetryConfig } from './retry.js'
 
 export type ErrorParser = (platform: Platform, status: number, body: unknown) => never
 
@@ -39,6 +40,8 @@ export interface HttpClientConfig {
    * Used by Meta Graph API platforms.
    */
   checkGraphApiErrors?: boolean
+  /** Retry config applied to get / post / delete calls */
+  retry?: RetryConfig
 }
 
 export class HttpClient {
@@ -46,11 +49,13 @@ export class HttpClient {
   readonly #platform: Platform
   readonly #parseError: ErrorParser
   readonly #checkGraphApiErrors: boolean
+  readonly #retry: RetryConfig | undefined
 
   constructor(config: HttpClientConfig) {
     this.#platform = config.platform
     this.#parseError = config.parseError ?? bearerErrorParser
     this.#checkGraphApiErrors = config.checkGraphApiErrors ?? false
+    this.#retry = config.retry
 
     this.#client = axios.create({
       baseURL: config.baseUrl.replace(/\/$/, ''),
@@ -77,14 +82,16 @@ export class HttpClient {
     )
   }
 
+  #run<T>(fn: () => Promise<T>): Promise<T> {
+    return this.#retry ? withRetry(fn, this.#retry) : fn()
+  }
+
   async get<T>(path: string, params?: Record<string, string | number | boolean>): Promise<T> {
-    const response = await this.#client.get<T>(path, { params })
-    return response.data
+    return this.#run(() => this.#client.get<T>(path, { params }).then((r) => r.data))
   }
 
   async post<T>(path: string, body: Record<string, unknown> | FormData, params?: Record<string, string | number | boolean>): Promise<T> {
-    const response = await this.#client.post<T>(path, body, { params })
-    return response.data
+    return this.#run(() => this.#client.post<T>(path, body, { params }).then((r) => r.data))
   }
 
   async put<R>(url: string, body: unknown, headers?: Record<string, string>): Promise<R> {
@@ -97,7 +104,6 @@ export class HttpClient {
   }
 
   async delete<T>(path: string): Promise<T> {
-    const response = await this.#client.delete<T>(path)
-    return response.data
+    return this.#run(() => this.#client.delete<T>(path).then((r) => r.data))
   }
 }

@@ -1,6 +1,7 @@
 import { HttpClient, graphErrorParser } from '../../http/http-client.js'
 import { ValidationError, SocialSDKError } from '../../errors/index.js'
 import type { InstagramConfig, PostResult } from '../../types/index.js'
+import type { PostInfo } from '../../types/post-info.js'
 import {
   PostImageInputSchema,
   PostVideoInputSchema,
@@ -11,6 +12,7 @@ import {
   type MediaContainerResponse,
   type MediaPublishResponse,
   type MediaStatusResponse,
+  type InstagramMediaResponse,
 } from './instagram.types.js'
 
 export class InstagramClient {
@@ -127,6 +129,32 @@ export class InstagramClient {
     )
 
     return this.#publishContainer(container.id)
+  }
+
+  /** Fetch a media object by its ID and return normalised PostInfo. */
+  async getPost(mediaId: string): Promise<PostInfo> {
+    const raw = await this.#http.get<InstagramMediaResponse>(`/${mediaId}`, {
+      fields: 'id,caption,permalink,timestamp,like_count,comments_count,media_type',
+    })
+    return {
+      id: raw.id,
+      platform: 'instagram',
+      content: raw.caption ?? null,
+      url: raw.permalink ?? null,
+      createdAt: raw.timestamp ?? null,
+      metrics: {
+        likes: raw.like_count ?? null,
+        comments: raw.comments_count ?? null,
+        shares: null,
+        views: null,
+      },
+      raw,
+    }
+  }
+
+  /** Delete a media object by its ID. */
+  async deletePost(mediaId: string): Promise<void> {
+    await this.#http.delete<{ success: boolean }>(`/${mediaId}`)
   }
 
   /**

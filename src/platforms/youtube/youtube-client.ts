@@ -2,10 +2,12 @@ import axios from 'axios'
 import { AuthError, RateLimitError, SocialSDKError, ValidationError, type Platform } from '../../errors/index.js'
 import type { PostResult } from '../../types/index.js'
 import type { YouTubeConfig } from '../../types/index.js'
+import type { PostInfo } from '../../types/post-info.js'
 import {
   YouTubeUploadVideoInputSchema,
   type YouTubeUploadVideoInput,
   type YouTubeVideoResource,
+  type YouTubeVideoListResponse,
 } from './youtube.types.js'
 
 const PLATFORM: Platform = 'youtube'
@@ -64,6 +66,61 @@ export class YouTubeClient {
     }).catch((err: unknown) => { throw this.#parseYouTubeError(err) })
 
     return { id: uploadResp.data.id, platform: PLATFORM, createdAt: new Date().toISOString() }
+  }
+
+  /** Fetch a YouTube video's metadata and return normalised PostInfo. */
+  async getVideo(videoId: string): Promise<PostInfo> {
+    const resp = await axios.get<YouTubeVideoListResponse>(
+      'https://www.googleapis.com/youtube/v3/videos',
+      {
+        params: { part: 'snippet,statistics', id: videoId },
+        headers: { Authorization: `Bearer ${this.#accessToken}` },
+      },
+    ).catch((err: unknown) => { throw this.#parseYouTubeError(err) })
+
+    const item = resp.data.items?.[0]
+    if (!item) throw new SocialSDKError(`Video ${videoId} not found`, PLATFORM, 404)
+
+    return {
+      id: item.id,
+      platform: PLATFORM,
+      content: item.snippet?.title ?? null,
+      url: `https://www.youtube.com/watch?v=${item.id}`,
+      createdAt: item.snippet?.publishedAt ?? null,
+      metrics: {
+        likes: item.statistics?.likeCount != null ? Number(item.statistics.likeCount) : null,
+        comments: item.statistics?.commentCount != null ? Number(item.statistics.commentCount) : null,
+        shares: null,
+        views: item.statistics?.viewCount != null ? Number(item.statistics.viewCount) : null,
+      },
+      raw: item,
+    }
+  }
+
+  /** Delete a YouTube video by its ID. */
+  async deleteVideo(videoId: string): Promise<void> {
+    await axios.delete('https://www.googleapis.com/youtube/v3/videos', {
+      params: { id: videoId },
+      headers: { Authorization: `Bearer ${this.#accessToken}` },
+    }).catch((err: unknown) => { throw this.#parseYouTubeError(err) })
+  }
+
+  /** Update a video's snippet metadata. */
+  async updateVideo(
+    videoId: string,
+    update: { title?: string; description?: string; tags?: string[]; categoryId?: string },
+  ): Promise<void> {
+    const snippet: Record<string, unknown> = {}
+    if (update.title !== undefined) snippet['title'] = update.title
+    if (update.description !== undefined) snippet['description'] = update.description
+    if (update.tags !== undefined) snippet['tags'] = update.tags
+    if (update.categoryId !== undefined) snippet['categoryId'] = update.categoryId
+
+    await axios.put(
+      'https://www.googleapis.com/youtube/v3/videos?part=snippet',
+      { id: videoId, snippet },
+      { headers: { Authorization: `Bearer ${this.#accessToken}`, 'Content-Type': 'application/json' } },
+    ).catch((err: unknown) => { throw this.#parseYouTubeError(err) })
   }
 
   #parseYouTubeError(err: unknown): SocialSDKError {
