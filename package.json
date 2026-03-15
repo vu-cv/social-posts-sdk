@@ -1,6 +1,6 @@
 {
   "name": "social-posts-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "TypeScript SDK for posting to social media: Facebook, Instagram, Threads, Twitter/X, LinkedIn, TikTok, YouTube, Pinterest, Telegram, Zalo",
   "type": "module",
   "main": "./dist/index.cjs",
